@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>F-Clicker</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #f5576c);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stats {
+            margin-bottom: 30px;
+        }
+
+        .counter {
+            font-size: 4em;
+            font-weight: bold;
+            margin: 20px 0;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+            color: #ffeb3b;
+        }
+
+        .fps {
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
+
+        .click-circle {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b, #ffa726);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 30px;
+            cursor: pointer;
+            border: 4px solid white;
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.5);
+            transition: all 0.1s ease;
+            user-select: none;
+            font-size: 3em;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .click-circle:active {
+            transform: scale(0.95);
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.7);
+        }
+
+        .upgrades {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .upgrade {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .upgrade:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .upgrade:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .upgrade-name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .upgrade-cost {
+            color: #ffeb3b;
+            font-size: 0.9em;
+        }
+
+        .upgrade-level {
+            font-size: 0.8em;
+            opacity: 0.8;
+        }
+
+        .reset-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .auto-clickers {
+            margin-top: 20px;
+            font-size: 1.1em;
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        .click-power {
+            font-size: 1.1em;
+            margin: 10px 0;
+            color: #4ecdc4;
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    
+    <div class="container">
+        <div class="stats">
+            <h1>F-Clicker 🎮</h1>
+            <div class="counter" id="counter">0</div>
+            <div class="click-power" id="clickPower">Сила клика: 1</div>
+            <div class="fps" id="fps">Кликов в секунду: 0</div>
+        </div>
+
+        <div class="click-circle" id="clickButton">
+            F
+        </div>
+
+        <div class="auto-clickers" id="autoClickers">
+            Автокликеры: 0
+        </div>
+
+        <div class="upgrades" id="upgrades">
+            <!-- Улучшения будут добавляться здесь -->
+        </div>
+
+        <button class="reset-btn" onclick="resetGame()">🔄 Перезапуск</button>
+    </div>
+
+    <script>
+        let score = 0;
+        let clickPower = 1;
+        let autoClickers = 0;
+        let lastUpdate = Date.now();
+        let clicksThisSecond = 0;
+        let lastSecond = Date.now();
+        let fps = 0;
+
+        // Система улучшений
+        const upgrades = [
+            {
+                id: 1,
+                name: "💪 Усиленный палец",
+                cost: 10,
+                level: 0,
+                maxLevel: 10,
+                effect: "Увеличивает силу клика на +1",
+                apply: function() { clickPower += 1; }
+            },
+            {
+                id: 2,
+                name: "🚀 Автокликер",
+                cost: 50,
+                level: 0,
+                maxLevel: 20,
+                effect: "Автоматически кликает 1 раз в секунду",
+                apply: function() { autoClickers += 1; }
+            },
+            {
+                id: 3,
+                name: "⚡ Супер-клик",
+                cost: 200,
+                level: 0,
+                maxLevel: 5,
+                effect: "Умножает силу клика на 2",
+                apply: function() { clickPower *= 2; }
+            },
+            {
+                id: 4,
+                name: "🎯 Точность",
+                cost: 100,
+                level: 0,
+                maxLevel: 8,
+                effect: "Увеличивает автокликеры на +1",
+                apply: function() { autoClickers += 1; }
+            }
+        ];
+
+        // Функция клика
+        function handleClick() {
+            score += clickPower;
+            clicksThisSecond++;
+            updateDisplay();
+            createParticle();
+            
+            // Анимация кнопки
+            const button = document.getElementById('clickButton');
+            button.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                button.style.transform = 'scale(1)';
+            }, 100);
+        }
+
+        function buyUpgrade(upgradeId) {
+            const upgrade = upgrades.find(u => u.id === upgradeId);
+            
+            if (upgrade && score >= upgrade.cost && upgrade.level < upgrade.maxLevel) {
+                score -= upgrade.cost;
+                upgrade.level++;
+                upgrade.cost = Math.floor(upgrade.cost * 1.5);
+                upgrade.apply();
+                updateDisplay();
+                renderUpgrades();
+            }
+        }
+
+        function updateDisplay() {
+            document.getElementById('counter').textContent = Math.floor(score);
+            document.getElementById('clickPower').textContent = `Сила клика: ${clickPower}`;
+            document.getElementById('autoClickers').textContent = `Автокликеры: ${autoClickers}`;
+            document.getElementById('fps').textContent = `Кликов в секунду: ${fps}`;
+        }
+
+        function renderUpgrades() {
+            const upgradesContainer = document.getElementById('upgrades');
+            upgradesContainer.innerHTML = '';
+            
+            upgrades.forEach(upgrade => {
+                const upgradeElement = document.createElement('div');
+                upgradeElement.className = 'upgrade';
+                upgradeElement.onclick = () => buyUpgrade(upgrade.id);
+                
+                if (score < upgrade.cost || upgrade.level >= upgrade.maxLevel) {
+                    upgradeElement.style.opacity = '0.5';
+                    upgradeElement.style.cursor = 'not-allowed';
+                } else {
+                    upgradeElement.style.opacity = '1';
+                    upgradeElement.style.cursor = 'pointer';
+                }
+                
+                upgradeElement.innerHTML = `
+                    <div class="upgrade-name">${upgrade.name}</div>
+                    <div class="upgrade-level">Уровень: ${upgrade.level}/${upgrade.maxLevel}</div>
+                    <div class="upgrade-cost">Цена: ${Math.floor(upgrade.cost)} F</div>
+                    <div style="font-size: 0.8em; margin-top: 5px;">${upgrade.effect}</div>
+                `;
+                
+                upgradesContainer.appendChild(upgradeElement);
+            });
+        }
+
+        function createParticle() {
+            const particles = document.getElementById('particles');
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            
+            const size = Math.random() * 10 + 5;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            
+            const colors = ['#ff6b6b', '#4ecdc4', '#ffa726', '#9966cc', '#66bb6a'];
+            particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+            
+            const button = document.getElementById('clickButton');
+            const rect = button.getBoundingClientRect();
+            
+            particle.style.left = `${rect.left + rect.width / 2}px`;
+            particle.style.top = `${rect.top + rect.height / 2}px`;
+            particle.style.animationDuration = `${Math.random() * 2 + 1}s`;
+            
+            particles.appendChild(particle);
+            
+            setTimeout(() => {
+                if (particle.parentNode) {
+                    particle.remove();
+                }
+            }, 3000);
+        }
+
+        function resetGame() {
+            if (confirm('Точно перезапустить игру?')) {
+                score = 0;
+                clickPower = 1;
+                autoClickers = 0;
+                clicksThisSecond = 0;
+                fps = 0;
+                
+                upgrades.forEach(upgrade => {
+                    upgrade.level = 0;
+                    upgrade.cost = [10, 50, 200, 100][upgrade.id - 1];
+                });
+                
+                updateDisplay();
+                renderUpgrades();
+            }
+        }
+
+        // Игровой цикл
+        function gameLoop() {
+            const now = Date.now();
+            const delta = (now - lastUpdate) / 1000;
+            
+            // Автокликеры
+            if (autoClickers > 0) {
+                score += autoClickers * clickPower * delta;
+            }
+            
+            // Расчет FPS
+            if (now - lastSecond >= 1000) {
+                fps = clicksThisSecond;
+                clicksThisSecond = 0;
+                lastSecond = now;
+            }
+            
+            lastUpdate = now;
+            updateDisplay();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Создание фоновых частиц
+        function createBackgroundParticles() {
+            const particles = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = `${Math.random() * 100}vw`;
+                particle.style.top = `${Math.random() * 100}vh`;
+                particle.style.animationDelay = `${Math.random() * 5}s`;
+                particle.style.animationDuration = `${Math.random() * 3 + 2}s`;
+                particles.appendChild(particle);
+            }
+        }
+
+        // Инициализация
+        function init() {
+            // Добавляем обработчик клика на кнопку
+            const clickButton = document.getElementById('clickButton');
+            clickButton.addEventListener('click', handleClick);
+            
+            updateDisplay();
+            renderUpgrades();
+            createBackgroundParticles();
+            gameLoop();
+        }
+
+        // Запуск игры при загрузке страницы
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
